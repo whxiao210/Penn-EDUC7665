@@ -1,0 +1,71 @@
+---
+title: "Instrumental Variables Examples"
+date: "02-27-2025"
+author:
+- Prepared by Wendy Chan (Graduate School of Education, University of Pennsylvania)
+- Answered by Huanxiao Wang
+output:
+  bookdown::pdf_document2:
+    latex_engine: lualatex
+  tufte::tufte_handout:
+    latex_engine: xelatex
+toc: true
+toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+
+## Question 1
+
+In the following exercises, we will use the \`\`SchoolingReturns" data from the \textsc{ivreg} package to estimate the effects of educational attainment on wages. We will use proximity to a four-year college (\textsc{nearcollege4}) as an instrumental variable.
+
+```{r}
+library(pacman)
+p_load(ivreg)
+data(SchoolingReturns)
+```
+
+Using \textsc{wage} as the outcome and \textsc{education} as the treatment, run the following analyses. (a) Estimate the effect of schooling on the \textbf{log} wage using OLS without additional covariates. What are the estimate and standard error? (b) Now, include \textsc{nearcollege4} as an IV and estimate the average treatment effect of schooling on log wages. Describe any differences between the estimates in (a) and (b).
+
+```{r}
+#OLS without covariates
+m1 <- lm(log(wage) ~ education,data = SchoolingReturns)
+summary(m1)
+
+#IV without covariates
+m2 <- ivreg(log(wage) ~ education|nearcollege4, data = SchoolingReturns)
+# It's better to write m2 <- ivreg::ivreg(xxx), 
+# it's more clear to let R recognize the which function from which package
+summary(m2)
+```
+
+From the OLS model(m1), the estimate of the education coefficient is 0.052 with a standard error of 0.0029. This implies that with each additional year of education, the log of wages increases by 0.052.
+
+From the IV model(m2), the estimate of the education coefficient is 0.19 with a standard error of 0.023. The estimate is larger but the standard error is also larger. The p-value for the IV estimate is slightly larger, but still statistically significant.
+
+## Question 2
+
+Using the same IV model in (b), now estimate the effect of schooling on education but include \textsc{nearcollege2} as another instrument. What are the estimates of the average treatment effect and standard error?
+
+```{r}
+m3 <- ivreg::ivreg(log(wage) ~ education|nearcollege4+nearcollege2, 
+                   data = SchoolingReturns)
+summary(m3)
+```
+
+When we include both nearcollege4 and nearcollege2, the estimate of the education coefficient is now 0.19 with a standard error of 0.023. The p-value is still statistically significant.
+
+```{r}
+m4 <- ivreg::ivreg(formula = log(wage) ~ feducation + meducation 
+                   |education|nearcollege4 + nearcollege2 + 
+                     feducation + meducation, data = SchoolingReturns)
+
+summary(m4)
+```
+
+When including the two covariates, we see that the estimate of education is now larger at 0.25 with a standard error of 0.045 and the estimate is still statistically significant, albeit with a larger p-value. The estimates for father’s and mother’s education are both negative with similar magnitudes of −0.043 and 0.040, respectively. This implies that the parents’ education has a negative effect on the log of wages.
+
