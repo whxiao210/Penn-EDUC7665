@@ -1,0 +1,94 @@
+---
+title: "Exercises with Clustered Designs"
+author:
+- Prepared by Wendy Chan (Graduate School of Education, University of Pennsylvania)
+- Answered by Huanxiao Wang
+output:
+  html_document:
+    df_print: paged
+toc: true
+toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+
+## Question 1
+
+Refer to the Nashville dataset (nashvilledata.csv) that contains information on 1,735 students nested within 20 schools. We will use mc_post, the student-level post test score on multiple choice responses, as the outcome variable.
+
+(a) Fit a two-level CRD model without covariates, using \`\`treatment" as the treatment indicator at the school level. What are the estimates of the parameters in this model?
+
+```{r}
+pacman::p_load(lme4,plyr,tidyverse)
+
+Nashville <- read.csv("nashvilledata.csv")
+
+m1 <- lmer(mc_post ~ 1 + treatment + (1|school), data=Nashville)
+summary(m1)
+
+```
+From the result, Intercept (Estimate = 10.8927), treatment effect (Estimate = 2.4228), school-level variance (1.363) and Residual variance (10.142)
+
+(b) Interpret each parameter.
+ 
+  From the random effects, the variance of the school effect is 1.363, this refers to the variation in average post test scores across school. The variance of the student effect is 10.142, this refers to the variation in average post test scores within the same school.
+
+  From the fixed effects, the average score of post test for control group is 10.8927. The average treatment effect is 2.4228, which means the treatment group scored 2.4228 points higher than the control group on average.
+  
+(c) What is the estimated ICC?
+
+```{r}
+#Based on the results of m1 and formula of ICC, we can estimate ICC like this
+1.363/(1.363 + 10.142)
+```
+So the estimated ICC is 0.1184702, this refers to the around 11.85% of the variation in post test scores is attributed to differences among 20 schools.
+
+## Question 2
+
+Expand the model in Question 1 by adding mc_pre, group mean centered as a student-level covariate and sm_mc_pre, grand mean centered, as a school-level covariate. Note that \`\`treatment" should still be kept in the model.
+
+```{r}
+#group-mean centering the variable of mc_pre
+Nashville <- Nashville %>%
+  group_by(school) %>%
+  mutate(mc_pre.GROUP = mc_pre - mean(mc_pre)) %>%
+  ungroup
+#grand-mean centering the variable of sm_mc_pre
+Nashville <- Nashville %>%
+mutate(sm_mc_pre.GRAND = sm_mc_pre - mean(sm_mc_pre))
+
+m2 <- lmer(mc_post ~ 1 + treatment + mc_pre.GROUP + sm_mc_pre.GRAND + (1|school), data = Nashville)
+summary(m2)
+```
+
+(a) What are the estimates of the parameters in your new model?
+
+    From the random effects, the variance of school effect(tau_00) is 0.3567. This refers to the variation in average post scores across school. The variance of the student effect(sigma_squared) is 6.3569 and this refers to the variance of the individual student post scores within the same school.
+    And the other parameters from fixed effects are interpreted in next question.
+
+(b) Interpret the fixed effects.
+
+    From the fixed effects, the average post test scores for control school is 10.74189. 
+    The treatment effect is 2.48813, this refers students in the treatment group scored 2.48813 points higher on the post test than students in the control group, holding other covariates constant. This effect is statistically significant.
+    The effect of group-centered mc_pre is 0.65798. For every 1 point increase in a student’s mc_pre relative to their school’s average, the post test score increases by 0.65798 points on average. This effect is statistically significant.
+    The effect of sm_mc_pre by grand-centering is 0.54687. For every 1 point increase in a school’s average sm_mc_pre score (relative to the overall mean across all schools), the post test score increases by 1.20485 points on average. This effect is statistically significant.
+
+(c) Explain how the variance components changed compared to the model in Question 1.
+
+    The variance components are both smaller than the counterparts in model 1 because we include more covariates in model 2, and the proporation of the variance which can be explained by model has improved. In other words, the model’s explanatory power has improved.
+
+(d) About what fraction of the variance in student post-test scores is accounted for by student pre-test scores? (This is based on the student level variance)
+```{r}
+m3 <- lmer(mc_post ~ 1 + treatment + mc_pre.GROUP + (1 | school), data = Nashville)
+summary(m3)
+```
+```{r}
+#calculate the fraction of variance in student post-test scores is accounted for by student pre-test scores
+(10.142 - 6.3574) / 10.142
+```
+
+37.32% of variance in student post-test scores is accounted for by student pre-test scores.
